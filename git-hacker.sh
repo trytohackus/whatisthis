@@ -13,8 +13,8 @@
 #   /_/   \_\ .__/| .__/     \_/ \__,_|_|  |___/
 #           |_|   |_|                           
 
-declare -a def_opts=("uploadmode" "copymode" "uploadurl" "copyfolder")
-declare -A values=( [uploadmode]="0" [copymode]="0" [uploadurl]="" [copyfolder]="" )
+declare -a def_opts=("localcopy" "ignoremode" "uploadurl" "copypath")
+declare -A values=( [localcopy]="false" [ignoremode]="0" [uploadurl]="" [copypath]="" )
 
 #       _                  __  __       _       
 #      / \   _ __  _ __   |  \/  | __ _(_)_ __  
@@ -26,6 +26,8 @@ declare -A values=( [uploadmode]="0" [copymode]="0" [uploadurl]="" [copyfolder]=
 
 function main()
 {
+	# WIP ... Check if we have git installed...
+
 	# First, we have to check if githack file doesn't exists to create default config.
 
 	if [ ! -f githack ]; then
@@ -39,6 +41,46 @@ function main()
 	# Third, we have to load values
 
 	load_values
+
+	# Fourth, on the execution depending in what the user said we have to do things...
+
+	lc_var=$values[localcopy]
+	cp_var=$values[copypath]
+
+	declare -l lc_var #Convert to lowercase
+	if [ $lc_var == "true" ]; then
+		if [[ -z cp_var  ]]; then
+			echo "You must specify a path in case you set localcopy as true."
+			return 0
+		else
+			if [[ -d $cp_var ]]; then
+				copy -rf `pwd` $cp_var
+			else
+				echo "Invalid copy path provided."
+				return 0
+			fi
+		fi
+	fi
+
+	case $values[ignoremode] in
+	"0")
+		
+		;;
+	"1")
+		
+		;;
+	"2")
+		
+		;;
+	*)
+		echo "Unkown case for ignoremode."
+		return 0
+		;;
+
+	# WIP ... Detect if we have to configure git before anything
+
+	# WIP ... In uploadurl, ...
+	# WIP ... Depending if user selected copylocal then we have to remote add, or git init ...
 }
 
 #       _                  _____                     
