@@ -1,3 +1,4 @@
+#!/bin/bash
 
 #     _____ _____ _______   _    _          _____ _  ________ _____
 #    / ____|_   _|__   __| | |  | |   /\   / ____| |/ /  ____|  __ \
@@ -15,6 +16,7 @@
 
 declare -a def_opts=("localcopy" "ignoremode" "uploadurl" "copypath")
 declare -A values=( [localcopy]="false" [ignoremode]="0" [uploadurl]="" [copypath]="" )
+WORK_DIR="" # Temp folder, if used...
 
 #       _                  __  __       _       
 #      / \   _ __  _ __   |  \/  | __ _(_)_ __  
@@ -51,26 +53,50 @@ function main()
 	if [ $lc_var == "true" ]; then
 		if [[ -z cp_var  ]]; then
 			echo "You must specify a path in case you set localcopy as true."
-			return 0
+			return 0 # Or continue without copying...
 		else
 			if [[ -d $cp_var ]]; then
 				copy -rf `pwd` $cp_var
 			else
 				echo "Invalid copy path provided."
-				return 0
+				return 0 #Or continue without copying...
 			fi
 		fi
 	fi
 
+	# Prepare everything in a new temp folder if cp_var is empty
+
+        if [[ -z $cp_var ]]; then
+        	cp_var=$(create_temp_folder)
+                copy -rf `pwd` $cp_var
+	fi
+
+	# Is very important to delete .git folder in $cp_var
+	rm -rf "$cp_var/.git"
+
+	gitigpath="$cpvar"
+	gitigpath+="/.gitignore"
+
+	gitigcuspath=`pwd`
+	gitigcuspath+="/githackignore"
+
 	case $values[ignoremode] in
 	"0")
-		
+		# We have to include all files, there is or there isn't .gitignore file
+		# so, we need to upload to a temporaly folder or to copypath
+
+		rm -rf $gitigpath
 		;;
 	"1")
-		
+		# Don't do anything, if there isn't any .gitignore file we will do nothing
 		;;
 	"2")
-		
+		if [[ ! -f $gitigcuspath ]]; then
+			echo "You have specified to use a custom ignore file, please create githackignore with some content in this folder."
+			return 0
+		else
+			cp $gitigcuspath "$(pwd)/.gitignore"
+		fi
 		;;
 	*)
 		echo "Unkown case for ignoremode."
@@ -81,6 +107,23 @@ function main()
 
 	# WIP ... In uploadurl, ...
 	# WIP ... Depending if user selected copylocal then we have to remote add, or git init ...
+
+	uu_var=$values[uploadurl]
+	if [ -z $uu_var ]; then
+		echo "Is very important that you specify an url to upload this content."
+		return 0
+	else
+		if [ curl --output /dev/null --silent --head --fail "$uu_var"] && [[ "$uu_var" == "*.git" ]]; then
+			git init
+			git add --all
+			git commit -m "Initial commit"
+			git remote add origin $uu_var
+			git push -u origin master
+		else
+			echo "Invalid upload url provided."
+			return 0
+		fi
+	fi
 }
 
 #       _                  _____                     
@@ -147,6 +190,34 @@ function load_values
 	#	echo "Key: $j"
 	#	echo "Value: ${values[$j]}"
 	#done
+}
+
+# deletes the temp directory
+function cleanup
+{
+	rm -rf "$WORK_DIR"
+	echo "Deleted temp working directory $WORK_DIR"
+}
+
+function create_temp_folder
+{
+	# the directory of the script
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+	# the temp directory used, within $DIR
+	# omit the -p parameter to create a temporal directory in the default location
+	WORK_DIR=`mktemp -d -p "$DIR"`
+
+	# check if tmp dir was created
+	if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
+		echo "Could not create temp dir"
+		exit 1
+	fi
+
+	# register the cleanup function to be called on the EXIT signal
+	trap cleanup EXIT
+
+	echo "$WORK_DIR"
 }
 
 #    ___ _   _ ___   ____
