@@ -1,4 +1,4 @@
-# What Is This?
+# What is this?
 
 In this repository you can see more information for this repository.
 
