@@ -7,117 +7,146 @@
 #   | |__| |_| |_   | |    | |  | |/ ____ \ |____| . \| |____| | \ \
 #    \_____|_____|  |_|    |_|  |_/_/    \_\_____|_|\_\______|_|  \_\
 
-#       _                 __     __             
-#      / \   _ __  _ __   \ \   / /_ _ _ __ ___ 
+#       _                 __     __
+#      / \   _ __  _ __   \ \   / /_ _ _ __ ___
 #     / _ \ | '_ \| '_ \   \ \ / / _` | '__/ __|
 #    / ___ \| |_) | |_) |   \ V / (_| | |  \__ \
 #   /_/   \_\ .__/| .__/     \_/ \__,_|_|  |___/
-#           |_|   |_|                           
+#           |_|   |_|
 
 declare -a def_opts=("localcopy" "ignoremode" "uploadurl" "copypath")
 declare -A values=( [localcopy]="false" [ignoremode]="0" [uploadurl]="" [copypath]="" )
 WORK_DIR="" # Temp folder, if used...
 
-#       _                  __  __       _       
-#      / \   _ __  _ __   |  \/  | __ _(_)_ __  
-#     / _ \ | '_ \| '_ \  | |\/| |/ _` | | '_ \ 
+#       _                  __  __       _
+#      / \   _ __  _ __   |  \/  | __ _(_)_ __
+#     / _ \ | '_ \| '_ \  | |\/| |/ _` | | '_ \
 #    / ___ \| |_) | |_) | | |  | | (_| | | | | |
 #   /_/   \_\ .__/| .__/  |_|  |_|\__,_|_|_| |_|
-#           |_|   |_|                           
+#           |_|   |_|
 
 
 function main()
 {
-	# WIP ... Check if we have git installed...
+        # WIP ... Check if we have git installed...
 
-	# First, we have to check if githack file doesn't exists to create default config.
+        # First, we have to check if githack file doesn't exists to create default config.
 
-	if [ ! -f githack ]; then
-		create_def_config
-	fi
+        if [ ! -f githack ]; then
+                create_def_config
+        fi
 
-	# Second, we have to make this file be ignored by the uploader.
+        # Second, we have to make this file be ignored by the uploader.
 
-	ignore_this_file true
+        ignore_this_file true
 
-	# Third, we have to load values
+        # Third, we have to load values
 
-	load_values
+        load_values
 
-	# Fourth, on the execution depending in what the user said we have to do things...
+        # Fourth, on the execution depending in what the user said we have to do things...
 
-	lc_var=$values[localcopy]
-	cp_var=$values[copypath]
+        lc_var=$values[localcopy]
+        cp_var=$values[copypath]
 
-	declare -l lc_var #Convert to lowercase
-	if [ $lc_var == "true" ]; then
-		if [[ -z cp_var  ]]; then
-			echo "You must specify a path in case you set localcopy as true."
-			return 0 # Or continue without copying...
-		else
-			if [[ -d $cp_var ]]; then
-				copy -rf `pwd` $cp_var
+        declare -l lc_var #Convert to lowercase
+        if [ $lc_var == "true" ]; then
+                if [[ -z cp_var  ]]; then
+                        echo "You must specify a path in case you set localcopy as true."
+                        return 0 # Or continue without copying...
+                else
+                        if [[ -d $cp_var ]]; then
+                                copy -rf `pwd` $cp_var
 			else
-				echo "Invalid copy path provided."
-				return 0 #Or continue without copying...
-			fi
-		fi
-	fi
+                                echo "Invalid copy path provided."
+                                return 0 #Or continue without copying...
+                        fi
+                fi
+        fi
 
-	# Prepare everything in a new temp folder if cp_var is empty
+        # Prepare everything in a new temp folder if cp_var is empty
 
+	tempused=false
         if [[ -z $cp_var ]]; then
-        	cp_var=$(create_temp_folder)
-                copy -rf `pwd` $cp_var
-	fi
+                # WIP ... Check if there is a temp folder created before create a new one
+                tn_file="$(pwd)/tempname"
 
-	# Is very important to delete .git folder in $cp_var
-	rm -rf "$cp_var/.git"
-
-	gitigpath="$cpvar"
-	gitigpath+="/.gitignore"
-
-	gitigcuspath=`pwd`
-	gitigcuspath+="/githackignore"
-
-	case $values[ignoremode] in
-	"0")
-		# We have to include all files, there is or there isn't .gitignore file
-		# so, we need to upload to a temporaly folder or to copypath
-
-		rm -rf $gitigpath
-		;;
-	"1")
-		# Don't do anything, if there isn't any .gitignore file we will do nothing
-		;;
-	"2")
-		if [[ ! -f $gitigcuspath ]]; then
-			echo "You have specified to use a custom ignore file, please create githackignore with some content in this folder."
-			return 0
+		if [ ! -f $tn-name ]; then
+			cp_var=$(create_temp_folder)
+			echo $cp_var > $tn_file
 		else
-			cp $gitigcuspath "$(pwd)/.gitignore"
+			cp_var=$(cat $tn_file | head -n1)
+			tempuser=true
 		fi
-		;;
-	*)
-		echo "Unkown case for ignoremode."
-		return 0
-		;;
 
-	# WIP ... Detect if we have to configure git before anything
+               	copy -rf `pwd` $cp_var
+        fi
 
-	# WIP ... In uploadurl, ...
-	# WIP ... Depending if user selected copylocal then we have to remote add, or git init ...
+        # Is very important to delete .git folder in $cp_var
+        gitgitfolder="$cpvar"
+        gitgitfolder+="/.git"
+
+        if [[ -d $gitgitfolder ]]; then
+		# Check if there is a valid git foldeer to remove, if not, nothing to do here...
+                rm -rf $gitgitfolder
+        fi
+
+        gitigpath="$cpvar"
+        gitigpath+="/.gitignore"
+
+        gitigcuspath=`pwd`
+        gitigcuspath+="/githackignore"
+
+        case $values[ignoremode] in
+        "0")
+                # We have to include all files, there is or there isn't .gitignore file
+                # so, we need to upload to a temporaly folder or to copypath
+
+                rm -rf $gitigpath
+                ;;
+        "1")
+                # Don't do anything, if there isn't any .gitignore file we will do nothing
+                ;;
+        "2")
+                if [[ ! -f $gitigcuspath ]]; then
+                        echo "You have specified to use a custom ignore file, please create githackignore with some content in this folder."
+                        return 0
+                else
+                        # Copy githackignore file from this folder to another one
+                        cp $gitigcuspath "$(pwd)/.gitignore"
+                fi
+                ;;
+        *)
+                echo "Unkown case for ignoremode."
+                return 0
+                ;;
+	esac
+
+        # WIP ... Detect if we have to configure git before anything
+
+        # WIP ... In uploadurl, ...
+        # WIP ... Depending if user selected copylocal then we have to remote add, or git init ...
+
+	# WIP .. Remove or ignore unnecesary files to .gitignore
+        # WIP ... Remove git-hacker.sh & bindings.sh & tempname files from new folder
+	# WIP ... Pass filename "bindings.sh" as call parameter
 
 	uu_var=$values[uploadurl]
 	if [ -z $uu_var ]; then
 		echo "Is very important that you specify an url to upload this content."
 		return 0
 	else
-		if [ curl --output /dev/null --silent --head --fail "$uu_var"] && [[ "$uu_var" == "*.git" ]]; then
-			git init
+		if [ curl --output /dev/null --silent --head --fail "$uu_var"] && [[ $uu_var == *.git ]]; then
+			# Depending if movied for first time or updated changes then commit or init or remote add (WIP)
+			if [ $tempused ]; then
+				git init
+			fi
 			git add --all
-			git commit -m "Initial commit"
-			git remote add origin $uu_var
+			read -p "Message for this commit: " commit_msg
+			git commit -m $commit_msg
+			if [ $tempused ]; then
+				git remote add origin $uu_var
+			fi
 			git push -u origin master
 		else
 			echo "Invalid upload url provided."
@@ -126,12 +155,12 @@ function main()
 	fi
 }
 
-#       _                  _____                     
-#      / \   _ __  _ __   |  ___|   _ _ __   ___ ___ 
+#       _                  _____
+#      / \   _ __  _ __   |  ___|   _ _ __   ___ ___
 #     / _ \ | '_ \| '_ \  | |_ | | | | '_ \ / __/ __|
 #    / ___ \| |_) | |_) | |  _|| |_| | | | | (__\__ \
 #   /_/   \_\ .__/| .__/  |_|   \__,_|_| |_|\___|___/
-#           |_|   |_|                               
+#           |_|   |_|
 
 function create_def_config
 {
