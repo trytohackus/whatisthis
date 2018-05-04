@@ -79,7 +79,6 @@ function main()
 
         # Prepare everything in a new temp folder if cp_var is empty
 
-  tempused=true # If false that means that we have initializated it now
         if [[ -z $cp_var ]]; then
                 # WIP ... Check if there is a temp folder created before create a new one
                 tn_file="$(pwd)/tempname"
@@ -88,7 +87,6 @@ function main()
       cp_var=$(create_temp_folder)
       echo "Created temp folder in '$cp_var'."
       echo $cp_var > $tn_file
-      tempused=false
     else
       cp_var=$(cat $tn_file | head -n1)
     fi
@@ -169,7 +167,11 @@ function main()
 
   # Add temp folder to this .gitignore
 
-  echo "/$(basename "$cp_var")/" >> ".gitignore"
+  tmpfolder="/$(basename "$cp_var")/"
+
+  if ! grep -q $tmpfolder ".gitignore"; then
+    echo $tmpfolder >> ".gitignore"
+  fi
 
   uu_var=${values[uploadurl]}
   if [ -z $uu_var ]; then
@@ -179,14 +181,15 @@ function main()
     if curl --output /dev/null --silent --head --fail "$uu_var" && [[ $uu_var == *.git ]]; then
       # Depending if movied for first time or updated changes then commit or init or remote add
       cd $cp_var
-      if [ ! $tempused ]; then
+      repoexists="$( [[ -d "$cp_var/.git"]]; echo $? )"
+      if ! $repoexists; then
         git init
       fi
       git rm -rf --cached . # If this outputs an error means that any change on the gitignore was made
       git add --all
       read -p "Message for this commit: " commit_msg
       git commit -m $commit_msg
-      if [ ! $tempused ]; then
+      if ! $repoexists; then
         git remote add origin $uu_var
       fi
       git push -u origin master
