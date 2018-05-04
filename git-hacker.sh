@@ -140,11 +140,14 @@ function main()
 		return 0
 	fi
 
-	# WIP ... Remove or ignore unnecesary files to .gitignore
-        # WIP ... Remove git-hacker.sh & bindings.sh & tempname files from new folder
-	# WIP ... Pass filename "bindings.sh" as call parameter
+	# Remove or ignore unnecesary files to .gitignore
+        # Remove git-hacker.sh & bindings.sh & tempname files from new folder
+	# Pass filename "bindings.sh" as call parameter
 
-	bindings_file="$cp_var/bindings.sh"
+	ff=$(cat /proc/$PPID/cmdline)
+	bindings=${ff:4}
+
+	bindings_file="$cp_var/$bindings"
 
 	rm -rf "$cp_var/git-hacker.sh"
 	rm -rf "$cp_var/tempname"
