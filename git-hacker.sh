@@ -32,10 +32,10 @@ function main()
 {
         # Check if we have git installed...
 
-	if ! type git &> /dev/null; then
-		echo "You don0t have git installed, please install it."
-		return 0
-	fi
+  if ! type git &> /dev/null; then
+    echo "You don0t have git installed, please install it."
+    return 0
+  fi
 
         # First, we have to check if githack file doesn't exists to create default config.
 
@@ -45,11 +45,11 @@ function main()
 
         # Second, we have to make this file be ignored by the uploader.
 
-	is_debug=false
+  is_debug=false
 
-	if [ -f "isdebug" ]; then
-		is_debug=$(cat isdebug)
-	fi
+  if [ -f "isdebug" ]; then
+    is_debug=$(cat isdebug)
+  fi
 
         ignore_this_file $is_debug
 
@@ -69,8 +69,8 @@ function main()
                         return 0 # Or continue without copying...
                 else
                         if [[ -d $cp_var ]]; then
-                                cp -rf `pwd` $cp_var
-			else
+                                smartcopy $cp_var
+                        else
                                 echo "Invalid copy path provided."
                                 return 0 #Or continue without copying...
                         fi
@@ -79,39 +79,44 @@ function main()
 
         # Prepare everything in a new temp folder if cp_var is empty
 
-	tempused=false
+  tempused=true # If false that means that we have initializated it now
         if [[ -z $cp_var ]]; then
                 # WIP ... Check if there is a temp folder created before create a new one
                 tn_file="$(pwd)/tempname"
 
-		if [ ! -f $tn_file ]; then
-			cp_var=$(create_temp_folder)
-			#cp_var=$?
-			echo $cp_var > $tn_file
-		else
-			cp_var=$(cat $tn_file | head -n1)
-			tempuser=true
-		fi
+    if [ ! -f $tn_file ]; then
+      cp_var=$(create_temp_folder)
+      echo "Created temp folder in '$cp_var'."
+      echo $cp_var > $tn_file
+      tempused=false
+    else
+      cp_var=$(cat $tn_file | head -n1)
+    fi
 
-               	cp -rf `pwd` $cp_var
+    if [[ ! -d $cp_var ]]; then
+      mkdir $cp_var
+    fi
+
+                smartcopy $cp_var
         fi
 
         # Is very important to delete .git folder in $cp_var
-        gitgitfolder="$cpvar"
+        gitgitfolder="$cp_var"
         gitgitfolder+="/.git"
 
         if [[ -d $gitgitfolder ]]; then
-		# Check if there is a valid git foldeer to remove, if not, nothing to do here...
+    # Check if there is a valid git foldeer to remove, if not, nothing to do here...
                 rm -rf $gitgitfolder
         fi
 
-        gitigpath="$cpvar"
+        gitigpath="$cp_var"
         gitigpath+="/.gitignore"
 
         gitigcuspath=`pwd`
         gitigcuspath+="/githackignore"
 
-	im_var=${values[ignoremode]}
+  im_var=${values[ignoremode]}
+  #echo "Selected option '$im_var' in ignore mode."
         case $im_var in
         "0")
                 # We have to include all files, there is or there isn't .gitignore file
@@ -128,61 +133,68 @@ function main()
                         return 0
                 else
                         # Copy githackignore file from this folder to another one
-                        cp $gitigcuspath "$(pwd)/.gitignore"
+                        cp $gitigcuspath "$cp_var/.gitignore"
                 fi
                 ;;
         *)
                 echo "Unkown case '$im_var' for ignoremode."
                 return 0
                 ;;
-	esac
+  esac
 
         # Detect if we have to configure git before anything
 
-	if [ -z $(git config --get user.name) ]; then
-		echo "You need to configure GIT before doing anything..."
-		return 0
-	fi
+  if [ -z $(git config --get user.name) ]; then
+    echo "You need to configure GIT before doing anything..."
+    return 0
+  fi
 
-	# Remove or ignore unnecesary files to .gitignore
+  # Remove or ignore unnecesary files to .gitignore
         # Remove git-hacker.sh & bindings.sh & tempname files from new folder
-	# Pass filename "bindings.sh" as call parameter
+  # Pass filename "bindings.sh" as call parameter
 
-	ff=$(cat /proc/$PPID/cmdline)
-	bindings=${ff:4}
+  # We have to implement PPID in the grep of smartcopy (WIP)
+  #ff=$(cat /proc/$PPID/cmdline)
+  #bindings=${ff:4}
 
-	bindings_file="$cp_var/$bindings"
+  #bindings_file="$cp_var/$bindings"
 
-	rm -rf "$cp_var/git-hacker.sh"
-	rm -rf "$cp_var/tempname"
+  #rm -rf "$cp_var/git-hacker.sh"
+  #rm -rf "$cp_var/tempname"
 
-	if [ -f $bindings_file ]; then
-		rm -rf $bindings_file
-	#else # We have to detect the name that has executed this script (WIP)
-	fi
+  #if [ -f $bindings_file ]; then
+  # rm -rf $bindings_file
+  #else # We have to detect the name that has executed this script (WIP)
+  #fi
 
-	uu_var=${values[uploadurl]}
-	if [ -z $uu_var ]; then
-		echo "Is very important that you specify an url to upload this content."
-		return 0
-	else
-		if [ curl --output /dev/null --silent --head --fail "$uu_var"] && [[ $uu_var == *.git ]]; then
-			# Depending if movied for first time or updated changes then commit or init or remote add
-			if [ $tempused ]; then
-				git init
-			fi
-			git add --all
-			read -p "Message for this commit: " commit_msg
-			git commit -m $commit_msg
-			if [ $tempused ]; then
-				git remote add origin $uu_var
-			fi
-			git push -u origin master
-		else
-			echo "Invalid upload url provided."
-			return 0
-		fi
-	fi
+  # Add temp folder to this .gitignore
+
+  echo "/$(basename "$cp_var")/" >> ".gitignore"
+
+  uu_var=${values[uploadurl]}
+  if [ -z $uu_var ]; then
+    echo "Is very important that you specify an url to upload this content."
+    return 0
+  else
+    if curl --output /dev/null --silent --head --fail "$uu_var" && [[ $uu_var == *.git ]]; then
+      # Depending if movied for first time or updated changes then commit or init or remote add
+      cd $cp_var
+      if [ ! $tempused ]; then
+        git init
+      fi
+      git rm -rf --cached . # If this outputs an error means that any change on the gitignore was made
+      git add --all
+      read -p "Message for this commit: " commit_msg
+      git commit -m $commit_msg
+      if [ ! $tempused ]; then
+        git remote add origin $uu_var
+      fi
+      git push -u origin master
+    else
+      echo "Invalid upload url provided."
+      return 0
+    fi
+  fi
 }
 
 #       _                  _____
@@ -195,12 +207,12 @@ function main()
 function create_def_config
 {
 
-	echo "[main]" > githack
+  echo "[main]" > githack
 
-	for i in "${def_opts[@]}"
-	do
-		echo "  $i = ${values[$i]}" >> githack
-	done
+  for i in "${def_opts[@]}"
+  do
+    echo "  $i = ${values[$i]}" >> githack
+  done
 
 }
 
@@ -208,81 +220,100 @@ function create_def_config
 function ignore_this_file()
 {
 
-	if grep -q "git-hacker.sh" ".gitignore"; then
-		echo "This file is already in .gitignore"
-		return 0
-	fi
+  if grep -q "git-hacker.sh" ".gitignore"; then
+    #echo "This file is already in .gitignore"
+    return 0
+  fi
 
-	line=""
+  line=""
 
-	if [[ ${1,,} == "true" ]]; then
-		line+="!"
-	fi
+  if [[ ${1,,} == "true" ]]; then
+    line+="!"
+  fi
 
-	line+="git-hacker.sh"
-	filename=".gitignore"
+  line+="git-hacker.sh"
+  filename=".gitignore"
 
-	if [ ! -f $filename ]; then
-		touch $filename
-		echo "$line" > $filename
-	else
-		if ! grep -Fxq "$line" $filename ; then
-			echo "$line" >> $filename
-		fi
-	fi
+  if [ ! -f $filename ]; then
+    touch $filename
+    echo "$line" > $filename
+  else
+    if ! grep -Fxq "$line" $filename ; then
+      echo "$line" >> $filename
+    fi
+  fi
 }
 
 function load_values
 {
-	cfg_parser githack
+  cfg_parser githack
 
-	cfg_section_main
+  cfg_section_main
 
-	for i in "${def_opts[@]}"; do
-		# Default values
+  for i in "${def_opts[@]}"; do
+    # Default values
 
-		#echo "Key: $i"
-		#echo "Value: ${values[$i]}"
-		eval "value=\$$i"
-		values[$i]=$value
-	done
+    #echo "Key: $i"
+    #echo "Value: ${values[$i]}"
+    eval "value=\$$i"
+    values[$i]=$value
+  done
 
-	#Checking values
+  #Checking values
 
-	#echo "----"
+  #echo "----"
 
-	#for j in "${!values[@]}"; do
-	#	echo "Key: $j"
-	#	echo "Value: ${values[$j]}"
-	#done
+  #for j in "${!values[@]}"; do
+  # echo "Key: $j"
+  # echo "Value: ${values[$j]}"
+  #done
 }
 
 # deletes the temp directory
 function cleanup
 {
-	rm -rf "$WORK_DIR"
-	#echo "Deleted temp working directory $WORK_DIR"
+  rm -rf "$WORK_DIR"
+  #echo "Deleted temp working directory $WORK_DIR"
 }
 
 function create_temp_folder
 {
-	# the directory of the script
-	#DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+  # the directory of the script
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-	# the temp directory used, within $DIR
-	# omit the -p parameter to create a temporal directory in the default location
-	WORK_DIR=`mktemp -d` #-p "$DIR"`
+  # the temp directory used, within $DIR
+  # omit the -p parameter to create a temporal directory in the default location
+  WORK_DIR=`mktemp -d -p "$DIR"`
 
-	# check if tmp dir was created
-	if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
-		echo "Could not create temp dir"
-		exit 1
-	fi
+  # check if tmp dir was created
+  if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
+    echo "Could not create temp dir"
+    exit 1
+  fi
 
-	# register the cleanup function to be called on the EXIT signal
-	trap cleanup EXIT
+  # register the cleanup function to be called on the EXIT signal
+  trap cleanup EXIT
 
-	echo "$WORK_DIR"
+  echo "$WORK_DIR"
+}
+
+function smartcopy()
+{
+  #chmod -R 755 "$1"
+  count=$(pwd | tr -cd '/' | wc -c)
+  for file in $(find "$(pwd)" -type f | grep -v -e .git -e "tmp." -e "tempname" -e "git-hacker.sh" -e ".vs" -e "bindings.sh" | cut -sd / -f $((count + 2))-); do 
+    ffpath="$1/$file"
+    ffold=$(dirname ${ffpath})
+
+    #relpath=$(pwd | cut -sd / -f $((count + 2))-)
+    if [ ! -d "$ffold" ]; then
+      mkdir -p "$ffold/"
+    fi
+    
+    cp -rf "$file" "$1/$file"
+    #echo "$file"
+    #echo "$(pwd)/$(basename $1)/$file"
+  done
 }
 
 #    ___ _   _ ___   ____
