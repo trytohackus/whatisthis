@@ -28,7 +28,12 @@ WORK_DIR="" # Temp folder, if used...
 
 function main()
 {
-        # WIP ... Check if we have git installed...
+        # Check if we have git installed...
+
+	if ! type git &> /dev/null; then
+		echo "You don0t have git installed, please install it."
+		return 0
+	fi
 
         # First, we have to check if githack file doesn't exists to create default config.
 
@@ -38,7 +43,13 @@ function main()
 
         # Second, we have to make this file be ignored by the uploader.
 
-        ignore_this_file true
+	is_debug=false
+
+	if [ -f isdebug ]; then
+		is_debug=$(cat isdebug)
+	fi
+
+        ignore_this_file is_debug
 
         # Third, we have to load values
 
@@ -122,14 +133,26 @@ function main()
                 ;;
 	esac
 
-        # WIP ... Detect if we have to configure git before anything
+        # Detect if we have to configure git before anything
 
-        # WIP ... In uploadurl, ...
-        # WIP ... Depending if user selected copylocal then we have to remote add, or git init ...
+	if [ -z $(git config --get user.name) ]; then
+		echo "You need to configure GIT before doing anything..."
+		return 0
+	fi
 
-	# WIP .. Remove or ignore unnecesary files to .gitignore
+	# WIP ... Remove or ignore unnecesary files to .gitignore
         # WIP ... Remove git-hacker.sh & bindings.sh & tempname files from new folder
 	# WIP ... Pass filename "bindings.sh" as call parameter
+
+	bindings_file="$cp_var/bindings.sh"
+
+	rm -rf "$cp_var/git-hacker.sh"
+	rm -rf "$cp_var/tempname"
+
+	if [ -f $bindings_file ]; then
+		rm -rf $bindings_file
+	#else # We have to detect the name that has executed this script (WIP)
+	fi
 
 	uu_var=$values[uploadurl]
 	if [ -z $uu_var ]; then
@@ -137,7 +160,7 @@ function main()
 		return 0
 	else
 		if [ curl --output /dev/null --silent --head --fail "$uu_var"] && [[ $uu_var == *.git ]]; then
-			# Depending if movied for first time or updated changes then commit or init or remote add (WIP)
+			# Depending if movied for first time or updated changes then commit or init or remote add
 			if [ $tempused ]; then
 				git init
 			fi
