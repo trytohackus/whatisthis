@@ -14,6 +14,8 @@
 #   /_/   \_\ .__/| .__/     \_/ \__,_|_|  |___/
 #           |_|   |_|
 
+#trap - EXIT
+
 declare -a def_opts=("localcopy" "ignoremode" "uploadurl" "copypath")
 declare -A values=( [localcopy]="false" [ignoremode]="0" [uploadurl]="" [copypath]="" )
 WORK_DIR="" # Temp folder, if used...
@@ -57,17 +59,17 @@ function main()
 
         # Fourth, on the execution depending in what the user said we have to do things...
 
-        lc_var=$values[localcopy]
-        cp_var=$values[copypath]
+        lc_var=${values[localcopy]}
+        cp_var=${values[copypath]}
 
         declare -l lc_var #Convert to lowercase
-        if [ $lc_var == "true" ]; then
+        if [[ $lc_var == "true" ]]; then
                 if [[ -z cp_var  ]]; then
                         echo "You must specify a path in case you set localcopy as true."
                         return 0 # Or continue without copying...
                 else
                         if [[ -d $cp_var ]]; then
-                                copy -rf `pwd` $cp_var
+                                cp -rf `pwd` $cp_var
 			else
                                 echo "Invalid copy path provided."
                                 return 0 #Or continue without copying...
@@ -82,15 +84,16 @@ function main()
                 # WIP ... Check if there is a temp folder created before create a new one
                 tn_file="$(pwd)/tempname"
 
-		if [ ! -f $tn-name ]; then
+		if [ ! -f $tn_file ]; then
 			cp_var=$(create_temp_folder)
+			#cp_var=$?
 			echo $cp_var > $tn_file
 		else
 			cp_var=$(cat $tn_file | head -n1)
 			tempuser=true
 		fi
 
-               	copy -rf `pwd` $cp_var
+               	cp -rf `pwd` $cp_var
         fi
 
         # Is very important to delete .git folder in $cp_var
@@ -108,7 +111,8 @@ function main()
         gitigcuspath=`pwd`
         gitigcuspath+="/githackignore"
 
-        case $values[ignoremode] in
+	im_var=${values[ignoremode]}
+        case $im_var in
         "0")
                 # We have to include all files, there is or there isn't .gitignore file
                 # so, we need to upload to a temporaly folder or to copypath
@@ -128,7 +132,7 @@ function main()
                 fi
                 ;;
         *)
-                echo "Unkown case for ignoremode."
+                echo "Unkown case '$im_var' for ignoremode."
                 return 0
                 ;;
 	esac
@@ -157,7 +161,7 @@ function main()
 	#else # We have to detect the name that has executed this script (WIP)
 	fi
 
-	uu_var=$values[uploadurl]
+	uu_var=${values[uploadurl]}
 	if [ -z $uu_var ]; then
 		echo "Is very important that you specify an url to upload this content."
 		return 0
@@ -205,7 +209,8 @@ function ignore_this_file()
 {
 	line=""
 
-	if $1 ; then
+	lc_isdebug=${1,,}
+	if [[ "$lc_isdebug" == "true" ]] ; then
 		line+="!"
 	fi
 
@@ -251,17 +256,17 @@ function load_values
 function cleanup
 {
 	rm -rf "$WORK_DIR"
-	echo "Deleted temp working directory $WORK_DIR"
+	#echo "Deleted temp working directory $WORK_DIR"
 }
 
 function create_temp_folder
 {
 	# the directory of the script
-	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+	#DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 	# the temp directory used, within $DIR
 	# omit the -p parameter to create a temporal directory in the default location
-	WORK_DIR=`mktemp -d -p "$DIR"`
+	WORK_DIR=`mktemp -d` #-p "$DIR"`
 
 	# check if tmp dir was created
 	if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then

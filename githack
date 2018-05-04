@@ -1,5 +1,5 @@
 [main]
-  uploadmode = eeeoo
-  copymode = 0
+  localcopy = false
+  ignoremode = 0
   uploadurl = 
-  copyfolder = 
+  copypath = 
