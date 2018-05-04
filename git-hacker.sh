@@ -33,7 +33,7 @@ function main()
         # Check if we have git installed...
 
   if ! type git &> /dev/null; then
-    echo "You don0t have git installed, please install it."
+    echo "You don't have git installed, please install it."
     return 0
   fi
 
@@ -181,8 +181,8 @@ function main()
     if curl --output /dev/null --silent --head --fail "$uu_var" && [[ $uu_var == *.git ]]; then
       # Depending if movied for first time or updated changes then commit or init or remote add
       cd $cp_var
-      repoexists="$( [[ -d "$cp_var/.git"]]; echo $? )"
-      if ! $repoexists; then
+      repoexists="[[ -d \"$cp_var/.git\" ]]"
+      if ! eval "$repoexists"; then
         git init
       fi
       git rm -rf --cached . # If this outputs an error means that any change on the gitignore was made
