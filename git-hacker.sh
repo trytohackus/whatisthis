@@ -30,20 +30,20 @@ WORK_DIR="" # Temp folder, if used...
 
 function main()
 {
-        # Check if we have git installed...
+  # Check if we have git installed...
 
   if ! type git &> /dev/null; then
     echo "You don't have git installed, please install it."
     return 0
   fi
 
-        # First, we have to check if githack file doesn't exists to create default config.
+  # First, we have to check if githack file doesn't exists to create default config.
 
-        if [ ! -f githack ]; then
-                create_def_config
-        fi
+  if [ ! -f githack ]; then
+    create_def_config
+  fi
 
-        # Second, we have to make this file be ignored by the uploader.
+  # Second, we have to make this file be ignored by the uploader.
 
   is_debug=false
 
@@ -51,40 +51,43 @@ function main()
     is_debug=$(cat isdebug)
   fi
 
-        ignore_this_file $is_debug
+  ignore_this_file $is_debug
 
-        # Third, we have to load values
+  # Third, we have to load values
 
-        load_values
+  load_values
 
-        # Fourth, on the execution depending in what the user said we have to do things...
+  # Fourth, on the execution depending in what the user said we have to do things...
 
-        lc_var=${values[localcopy]}
-        cp_var=${values[copypath]}
+  lc_var=${values[localcopy]}
+  cp_var=${values[copypath]}
 
-        declare -l lc_var #Convert to lowercase
-        if [[ $lc_var == "true" ]]; then
-                if [[ -z cp_var  ]]; then
-                        echo "You must specify a path in case you set localcopy as true."
-                        return 0 # Or continue without copying...
-                else
-                        if [[ -d $cp_var ]]; then
-                                smartcopy $cp_var
-                        else
-                                echo "Invalid copy path provided."
-                                return 0 #Or continue without copying...
-                        fi
-                fi
-        fi
+  readytocopy=false
+  # Little chekc before we do anything
 
-        # Prepare everything in a new temp folder if cp_var is empty
+  lc_var=${lc_var,,} #Convert to lowercase
+  if [[ $lc_var == "true" ]]; then
+    if [[ -z $cp_var ]]; then
+      echo "You must specify a path in case you set local copy as true."
+      return 0 # Or continue without copying...
+    else
+      if [[ -d $cp_var ]]; then
+        readytocopy=true
+      else
+        echo "Invalid copy path provided."
+        return 0 #Or continue without copying...
+      fi
+    fi
+  fi
 
-        if [[ -z $cp_var ]]; then
-                # WIP ... Check if there is a temp folder created before create a new one
-                tn_file="$(pwd)/tempname"
+  # Prepare everything in a new temp folder if cp_var is empty
+
+  if [[ -z $cp_var ]]; then
+    tn_file="$(pwd)/tempname"
 
     if [ ! -f $tn_file ]; then
       cp_var=$(create_temp_folder)
+      echo "$(pwd)/$(basename $cp_var)"
       echo "Created temp folder in '$cp_var'."
       echo $cp_var > $tn_file
     else
@@ -95,104 +98,103 @@ function main()
       mkdir $cp_var
     fi
 
-                smartcopy $cp_var
-        fi
+    readytocopy=true
+  fi
 
-        # Is very important to delete .git folder in $cp_var
-        gitgitfolder="$cp_var"
-        gitgitfolder+="/.git"
+  gitigpath="$cp_var"
+  gitigpath+="/.gitignore"
 
-        if [[ -d $gitgitfolder ]]; then
-    # Check if there is a valid git foldeer to remove, if not, nothing to do here...
-                rm -rf $gitgitfolder
-        fi
-
-        gitigpath="$cp_var"
-        gitigpath+="/.gitignore"
-
-        gitigcuspath=`pwd`
-        gitigcuspath+="/githackignore"
+  gitigcuspath=`pwd`
+  gitigcuspath+="/githackignore"
 
   im_var=${values[ignoremode]}
   #echo "Selected option '$im_var' in ignore mode."
-        case $im_var in
-        "0")
-                # We have to include all files, there is or there isn't .gitignore file
-                # so, we need to upload to a temporaly folder or to copypath
 
-                rm -rf $gitigpath
-                ;;
-        "1")
-                # Don't do anything, if there isn't any .gitignore file we will do nothing
-                ;;
-        "2")
-                if [[ ! -f $gitigcuspath ]]; then
-                        echo "You have specified to use a custom ignore file, please create githackignore with some content in this folder."
-                        return 0
-                else
-                        # Copy githackignore file from this folder to another one
-                        cp $gitigcuspath "$cp_var/.gitignore"
-                fi
-                ;;
-        *)
-                echo "Unkown case '$im_var' for ignoremode."
-                return 0
-                ;;
+  case $im_var in
+  "0")
+    # We have to include all files, there is or there isn't .gitignore file
+    # so, we need to upload to a temporaly folder or to copypath
+
+    rm -rf $gitigpath
+    ;;
+  "1")
+    # Don't do anything, if there isn't any .gitignore file we will do nothing
+    ;;
+  "2")
+    if [[ ! -f $gitigcuspath ]]; then
+      echo "You have specified to use a custom ignore file, please create githackignore with some content in this folder."
+      return 0
+    else
+      # Copy githackignore file from this folder to another one
+      cp $gitigcuspath "$cp_var/.gitignore"
+    fi
+    ;;
+  *)
+    echo "Unkown case '$im_var' for ignoremode."
+    return 0
+    ;;
   esac
 
-        # Detect if we have to configure git before anything
+  # Detect if we have to configure git before anything
 
   if [ -z $(git config --get user.name) ]; then
     echo "You need to configure GIT before doing anything..."
     return 0
   fi
 
-  # Remove or ignore unnecesary files to .gitignore
-        # Remove git-hacker.sh & bindings.sh & tempname files from new folder
-  # Pass filename "bindings.sh" as call parameter
-
-  # We have to implement PPID in the grep of smartcopy (WIP)
-  #ff=$(cat /proc/$PPID/cmdline)
-  #bindings=${ff:4}
-
-  #bindings_file="$cp_var/$bindings"
-
-  #rm -rf "$cp_var/git-hacker.sh"
-  #rm -rf "$cp_var/tempname"
-
-  #if [ -f $bindings_file ]; then
-  # rm -rf $bindings_file
-  #else # We have to detect the name that has executed this script (WIP)
-  #fi
-
   # Add temp folder to this .gitignore
 
   tmpfolder="/$(basename "$cp_var")/"
 
   if ! grep -q $tmpfolder ".gitignore"; then
-    echo $tmpfolder >> ".gitignore"
+    # Fix: New line is needed
+    line='\n'
+    line+="$tmpfolder"
+    echo $line >> ".gitignore"
   fi
 
+  originhome=$(pwd) # We need to know how to go back to home
   uu_var=${values[uploadurl]}
   if [ -z $uu_var ]; then
     echo "Is very important that you specify an url to upload this content."
     return 0
   else
+    # Check if the url is valid
     if curl --output /dev/null --silent --head --fail "$uu_var" && [[ $uu_var == *.git ]]; then
       # Depending if movied for first time or updated changes then commit or init or remote add
-      cd $cp_var
-      repoexists="[[ -d \"$cp_var/.git\" ]]"
-      if ! eval "$repoexists"; then
-        git init
+
+      repoexists=true
+
+      if [[ ! -d "$cp_var/.git" ]]; then
+        repoexists=false
+        if [[ `git -C $cp_var ls-remote`="HEAD" ]] ; then
+          # If this is true this means that the remote repo has content so, we will clone it, because...
+          # Clone does the worm better if it already contains anything...
+          git -C $cp_var clone $uu_var foo; mv $cp_var/foo/* $cp_var/foo/.git* $cp_var; rmdir $cp_var/foo
+        else
+          git init $cp_var
+          git -C $cp_var remote add origin $uu_var
+        fi
       fi
-      git rm -rf --cached . # If this outputs an error means that any change on the gitignore was made
-      git add --all
+
+      # After we have assure all changes, copy inside the new ones...
+      if [[ $readytocopy ]]; then
+        smartcopy $cp_var $originhome
+        yes | cp -rf $gitigcuspath "$cp_var/.gitignore" # Fix: we have to reupdate gitignore file...
+      fi
+
+      if [[ ! -z `git -C $cp_var diff HEAD .gitignore` ]]; then # Fixed unnecesary log errors, if gitignore have been changed then we have to re-add everything
+        echo "Modified .gitignore file, updating cached files..."
+        git -C $cp_var rm -rf --cached .
+      fi
+
       read -p "Message for this commit: " commit_msg
-      git commit -m $commit_msg
-      if ! $repoexists; then
-        git remote add origin $uu_var
-      fi
-      git push -u origin master
+
+      # Then with the new changes, we need to commit...
+      git -C $cp_var add --all
+      git -C $cp_var commit -m $commit_msg
+
+      git -C $cp_var push -u origin master
     else
       echo "Invalid upload url provided."
       return 0
@@ -228,7 +230,7 @@ function ignore_this_file()
     return 0
   fi
 
-  line=""
+  line="\n"
 
   if [[ ${1,,} == "true" ]]; then
     line+="!"
@@ -261,15 +263,6 @@ function load_values
     eval "value=\$$i"
     values[$i]=$value
   done
-
-  #Checking values
-
-  #echo "----"
-
-  #for j in "${!values[@]}"; do
-  # echo "Key: $j"
-  # echo "Value: ${values[$j]}"
-  #done
 }
 
 # deletes the temp directory
@@ -286,7 +279,7 @@ function create_temp_folder
 
   # the temp directory used, within $DIR
   # omit the -p parameter to create a temporal directory in the default location
-  WORK_DIR=`mktemp -d -p "$DIR"`
+  WORK_DIR=`mktemp -d -p $(pwd)` #"$DIR"`
 
   # check if tmp dir was created
   if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
@@ -297,14 +290,21 @@ function create_temp_folder
   # register the cleanup function to be called on the EXIT signal
   trap cleanup EXIT
 
-  echo "$WORK_DIR"
+  #echo "$(pwd)/$(basename $WORK_DIR)"
+  echo $WORK_DIR
 }
 
+# $1 = Where to copy
 function smartcopy()
 {
-  #chmod -R 755 "$1"
+  # Added own executor
+  ff=$(cat /proc/$PPID/cmdline)
+  bindings=${ff:4}
+
   count=$(pwd | tr -cd '/' | wc -c)
-  for file in $(find "$(pwd)" -type f | grep -v -e .git -e "tmp." -e "tempname" -e "git-hacker.sh" -e ".vs" -e "bindings.sh" | cut -sd / -f $((count + 2))-); do 
+
+  # Fix: Using -w to match whole foldername
+  for file in $(find "$(pwd)" -type f | grep -v -e "tmp." -e "tempname" -e ".vs" -e $bindings -e $(basename $0) -e "githack" | grep -wv ".git" | cut -sd / -f $((count + 2))-); do 
     ffpath="$1/$file"
     ffold=$(dirname ${ffpath})
 
@@ -314,6 +314,7 @@ function smartcopy()
     fi
     
     cp -rf "$file" "$1/$file"
+    
     #echo "$file"
     #echo "$(pwd)/$(basename $1)/$file"
   done
