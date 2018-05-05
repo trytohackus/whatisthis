@@ -148,9 +148,7 @@ function main()
 
   if ! grep -q $tmpfolder ".gitignore"; then
     # Fix: New line is needed
-    line='\n'
-    line+="$tmpfolder"
-    echo $line >> ".gitignore"
+    echo -e "$tmpfolder\n" >> ".gitignore"
   fi
 
   originhome=$(pwd) # We need to know how to go back to home
